@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {simulate,step,measure} from '../src/Simulation';
+import {generate} from '../src/WorldGenerator';
+import {apply,land} from '../src/Intervention';
+import {SeededRandom} from '../src/SeededRandom';
+import {chain} from '../src/EventHistory';
+import type {Intervention} from '../src/WorldState';
+test('same seed reproduces the complete century, including event history',()=>assert.deepEqual(simulate(418275),simulate(418275)));
+test('no intervention equals baseline under incremental playback',()=>{const w=generate(418275);measure(w);for(let n=0;n<100;n++)step(w);assert.deepEqual(w,simulate(418275));});
+test('intervention replay equals live state and changes future',()=>{const w=generate(418275);measure(w);for(let n=0;n<18;n++)step(w);const c=w.cells.find(c=>land(c)&&c.population>100)!;const i:Intervention={id:'i0',year:18,type:'research',position:{x:c.x,y:c.y}};apply(w,i);while(w.year<100)step(w);assert.deepEqual(w,simulate(418275,[i]));assert.notDeepEqual(w.metrics,simulate(418275).metrics);assert.ok(chain(w,'i0').length>1);});
+test('all five intervention types change simulated outcomes',()=>{for(const type of ['bridge','protect','road','hospital','research'] as const){const w=generate(418275);const c=w.cells.find(c=>type==='bridge'?c.terrain==='river'&&c.y>2&&c.y<13:type==='protect'?c.terrain==='forest':land(c))!;let end;if(type==='road'){const e=w.cells.find(e=>land(e)&&Math.abs(e.x-c.x)+Math.abs(e.y-c.y)===1)!;end={x:e.x,y:e.y};}const i:Intervention={id:'i0',year:0,type,position:{x:c.x,y:c.y},end};const result=simulate(418275,[i]);assert.notDeepEqual(result.metrics,simulate(418275).metrics,type);}});
+test('five-use budget and invalid terrain are enforced without consuming a use',()=>{const w=generate(42);const sea=w.cells.find(c=>c.terrain==='sea')!;assert.throws(()=>apply(w,{id:'bad',year:0,type:'hospital',position:sea}));assert.equal(w.interventions.length,0);for(const c of w.cells.filter(land).slice(0,5))apply(w,{id:`i${c.id}`,year:0,type:'hospital',position:c});assert.throws(()=>apply(w,{id:'six',year:0,type:'research',position:w.cells.find(land)!}));});
+test('RNG streams do not depend on consumption order',()=>{const v=SeededRandom.value(2,'disaster',38,6);for(let i=0;i<100;i++)SeededRandom.value(2,'economy',i);assert.equal(v,SeededRandom.value(2,'disaster',38,6));});
+test('event parent IDs exist and point backward',()=>{const w=generate(418275);const c=w.cells.find(land)!;const result=simulate(418275,[{id:'i0',year:0,type:'research',position:c}]);const ids=new Set<string>();for(const e of result.events){for(const p of e.parents)assert.ok(ids.has(p));ids.add(e.id);}});
