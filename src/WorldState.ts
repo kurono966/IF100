@@ -1,4 +1,5 @@
 export type Terrain = 'sea'|'plain'|'forest'|'mountain'|'river';
+export type Biome = 'ocean'|'coast'|'grassland'|'woodland'|'rainforest'|'desert'|'steppe'|'tundra'|'taiga'|'alpine'|'wetland'|'river';
 export type Kind = 'rain'|'drought'|'lightning'|'plant'|'herbivore'|'predator'|'fire'|'river'|'warmth'|'wind'|'migrant';
 export type Phase = 'weather'|'vegetation'|'animals'|'food'|'population'|'civilization'|'life'|'migration'|'trade'|'knowledge'|'culture';
 export interface Intervention { id:string; year:number; type:Kind; position:{x:number;y:number};profile?:PersonProfile }
@@ -21,8 +22,7 @@ export interface Tradition {origins:string[];skill:Skill;strength:number;practic
 export interface Realm {id:string;name:string;center:number;members:number[];formed:number;active:boolean;vitality:number;event:string;peak:number}
 export interface HistoricalTrace {cell:number;name:string;skill?:Skill;year:number;event:string}
 export interface LongHistory {cultureId:string;cultureName:string;placeName:string;traditions:Partial<Record<Skill,Tradition>>;ruins:number;exhaustion:number;civicAge:number;realm?:string;prestige:number}
-export interface Cell extends Ecology,Layers,LongHistory { id:number;x:number;y:number;terrain:Terrain;population:number;wealth:number;development:number;forest:number;infrastructure:number;technology:number;trade:number;stage:number;links:Record<Phase,string[]>;checkpoints:Record<string,number>;burnedUntil:number }
+export interface Cell extends Ecology,Layers,LongHistory { id:number;x:number;y:number;terrain:Terrain;biome:Biome;population:number;wealth:number;development:number;forest:number;infrastructure:number;technology:number;trade:number;stage:number;links:Record<Phase,string[]>;checkpoints:Record<string,number>;burnedUntil:number }
 export interface HistoryEvent { id:string;year:number;title:string;cell:number;parents:string[];root?:string;phase?:Phase;type?:EventType;types?:EventType[];destination?:number;amount?:number;roots?:string[];depth?:number;phases?:Phase[] }
 export interface Metrics { population:number;economy:number;nature:number;technology:number;happiness:number;stability:number;cities:number;forestRate:number;herbivores:number;predators:number;biodiversity:number;food:number }
 export interface WorldState { seed:number;year:number;cells:Cell[];events:HistoryEvent[];interventions:Intervention[];effects:NaturalEffect[];routes:TradeRoute[];metrics:Metrics;people:Individual[];realms:Realm[];traces:HistoricalTrace[] }
-
