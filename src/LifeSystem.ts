@@ -1,3 +1,4 @@
+import {agriculture,biomes} from './Biomes';
 import type {WorldState,Cell} from './WorldState';
 import {combine} from './EventHistory';
 import {land} from './Intervention';
@@ -8,20 +9,20 @@ export function updateLife(w:WorldState,old:Cell[]):void {
  for(const c of w.cells){if(!land(c))continue;const p=old[c.id];
  c.links.life=combine(w,p.links.life,c.links.vegetation,c.links.animals,c.links.weather,c.links.knowledge,c.links.culture);
  const windy=w.effects.some(e=>e.intervention.type==='wind'&&Math.hypot(e.intervention.position.x-c.x,e.intervention.position.y-c.y)<=2);
- const wetland=c.water*(1-c.forest*.45)*(windy?.6:1);
+ const wetland=c.water*(1-c.forest*.45)*(c.biome==='rainforest'||c.biome==='wetland'?1.25:1)*(windy?.6:1);
  c.pests=clamp(p.pests+(wetland*.8+.15*(1-c.biodiversity)-p.pests)*.16-c.predators*.003);
- c.diseaseRisk=clamp(c.pests*.55+c.water*.10+Math.max(0,p.population-400)*.00013-c.biodiversity*.12);
+ c.diseaseRisk=clamp(biomes[c.biome].disease*.25+c.pests*.55+c.water*.10+Math.max(0,p.population-400)*.00013-c.biodiversity*.12);
  if(c.diseaseRisk>.35&&R.value(w.seed,'epidemic',w.year,c.id)<c.diseaseRisk*.13&&cooldown(w,c,'epidemic',8)){
   c.epidemicUntil=w.year+3;emit(w,c,'epidemic','害虫と人口密集から疫病流行','life');
  }
  const flooded=c.floodedUntil>=w.year,epidemic=c.epidemicUntil>=w.year;
  c.health=clamp(p.health+(1-c.diseaseRisk-p.health)*.12-(epidemic?.10:0)-(flooded?.08:0),.08,1);
- c.resourceAvailability=clamp(c.forest*.38+c.herbivores*.013+c.soilFertility*.28);
+ c.resourceAvailability=clamp((c.biome==='taiga'?.12:0)+c.forest*.38+c.herbivores*.013+c.soilFertility*.28);
  const storage=c.traditions.pottery?.adopted?c.traditions.pottery.strength*.035:0;
  const learned=c.traditions.agronomy?.adopted?c.traditions.agronomy.strength*.08:0;
  const medicine=c.traditions.healing?.adopted?c.traditions.healing.strength*.04:0;
  c.health=clamp(c.health+medicine*.05-c.exhaustion*.003,.08,1);
- const farmland=(1-c.forest*.85)*c.water*c.soilFertility;
+ const farmland=(1-c.forest*.85)*c.water*c.soilFertility*agriculture(c);
  c.foodProduction=clamp((farmland*1.3+c.vegetation*.12+c.herbivores*.006-c.predators*.012)*(1-c.pests*.3)*(flooded?.55:1)*(1-c.exhaustion*.3)+learned,0,1.5);
  // Resource discoveries are persistent new practices; bonuses require their ecological resource.
  if(c.livelihood==='subsistence'&&sustained(c,'resource',c.population>50&&c.resourceAvailability>.32,4)){

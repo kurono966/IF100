@@ -1,3 +1,4 @@
+import {thermalSuitability} from './Biomes';
 import type {WorldState,Cell} from './WorldState';
 import {combine} from './EventHistory';
 import {land} from './Intervention';
@@ -6,7 +7,7 @@ export function updatePopulation(w:WorldState,old:Cell[]):void {
  for(const c of w.cells){if(!land(c))continue;const p=old[c.id];
  c.links.population=combine(w,p.links.population,c.links.food,c.links.life);
  const imports=Math.min(.35,p.trade*.08),supply=c.foodProduction+imports;
- const capacity=50+supply*1550*(.65+c.health*.35);
+ const capacity=(30+supply*1550*(.65+c.health*.35))*thermalSuitability(c.temperature);c.populationCapacity=capacity;
  const births=p.population*(.025+supply*.025)*c.health;
  const deaths=p.population*(.012+Math.max(0,p.population/capacity-1)*.055+(1-c.health)*.018+(c.epidemicUntil>=w.year?.035:0));
  c.population=Math.max(0,p.population+births-deaths);

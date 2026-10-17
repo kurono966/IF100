@@ -12,7 +12,7 @@ export function validate(w:WorldState,i:Intervention):string|undefined {
  if(i.type==='migrant'&&i.profile&&!validProfile(i.profile))return '移住者のプロフィールが不正です。';
  if(i.year!==w.year)return '現在年の介入を選んでください。';
  if(w.interventions.some(a=>a.id===i.id))return '介入IDが重複しています。';
- if(i.type==='river'&&!w.cells.some(c=>c.terrain==='river'&&Math.abs(c.x-x)+Math.abs(c.y-y)<=2))return '川か、川に接する陸地を選んでください。';
+ if(i.type==='river'&&!w.cells.some(c=>c.terrain==='river'&&Math.hypot(c.x-x,c.y-y)<=2))return '川か、川に接する陸地を選んでください。';
  if(!land(w.cells[y*16+x])&&!(i.type==='river'&&w.cells[y*16+x].terrain==='river'))return '平地・森林・集落のある陸地を選んでください。';
 }
 // Never mutate civilization here. Weather expires; organisms are one-off introductions.
