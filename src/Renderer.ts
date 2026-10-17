@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type {WorldState,Cell} from './WorldState';
 export const palette:Record<string,number>={sea:0xb9dce3,river:0x7fbdcf,plain:0xdce2b4,forest:0x9dbd89,mountain:0xc7c7b9};
-export function signature(c:Cell):string{return `${c.terrain}:${c.stage}:${c.forest>.3}:${c.infrastructure>.7}:${Math.round(c.herbivores/5)}:${Math.round(c.predators)}:${Math.round(c.vegetation*5)}:${c.development>16}`;}
+export function signature(c:Cell):string{return `${c.terrain}:${c.stage}:${c.forest>.3}:${c.roads>0}:${c.markets}:${c.realm}:${c.cultureId}:${c.ruins}:${Object.values(c.traditions).filter(t=>t?.adopted).map(t=>t!.skill).sort().join()}:${Math.round(c.herbivores/5)}:${Math.round(c.predators)}:${Math.round(c.vegetation*5)}:${c.development>16}`;}
 export class Renderer {
  private game:Phaser.Game;private scene?:Phaser.Scene;private graphics?:Phaser.GameObjects.Graphics;private state?:WorldState;private other?:WorldState;private diff=false;
  constructor(parent:string,onSelect?:(x:number,y:number)=>void){const owner=this;class MapScene extends Phaser.Scene{create(){owner.scene=this;owner.graphics=this.add.graphics();this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>onSelect?.(Math.min(15,Math.floor(p.x/32)),Math.min(15,Math.floor(p.y/32))));owner.paint();}}
@@ -12,13 +12,20 @@ export class Renderer {
  if(c.terrain==='mountain'){g.fillStyle(0x8b9789);g.fillTriangle(x+4,y+26,x+16,y+6,x+28,y+26);g.fillStyle(0xf6f5e9);g.fillTriangle(x+11,y+13,x+16,y+6,x+21,y+13);}
  if(c.forest>.3){for(let k=0;k<3;k++){const tx=x+7+k*8,ty=y+8+(k%2)*8;g.fillStyle(0x568262);g.fillTriangle(tx-5,ty+10,tx,ty-2,tx+5,ty+10);}}
  else if(c.development>16&&c.stage===0){g.lineStyle(2,0xc5b471);for(let k=0;k<3;k++)g.lineBetween(x+5,y+8+k*6,x+26,y+8+k*6);}
- if(c.infrastructure>.7){g.lineStyle(3,0xeee8d0);g.lineBetween(x,y+16,x+32,y+16);g.lineStyle(1,0xa89977);g.lineBetween(x,y+16,x+32,y+16);}
+ if(c.roads>0){g.lineStyle(3,0xeee8d0);g.lineBetween(x,y+16,x+32,y+16);g.lineStyle(1,0xa89977);g.lineBetween(x,y+16,x+32,y+16);}
  if(c.stage){const count=c.stage===1?2:c.stage===2?4:5;for(let k=0;k<count;k++){const bx=x+5+(k%3)*8,by=y+10+Math.floor(k/3)*10;g.fillStyle(c.stage===3?0x727c77:0xf9f3dc);g.fillRect(bx,by,6,c.stage===1?7:11);g.fillStyle(c.stage===3?0x4f6564:0xb6795c);g.fillTriangle(bx-1,by,bx+3,by-4,bx+7,by);}}
+ if(c.ruins>0){g.lineStyle(1,0x8d8175);g.strokeTriangle(x+3,y+27,x+7,y+20,x+11,y+27);}
+ if(c.stage>0&&w.year>=100){let hash=0;for(const letter of c.cultureId)hash=(hash*31+letter.charCodeAt(0))>>>0;const colors=[0x9982b2,0xb28b68,0x78a3a1,0xa9ac6e,0xb88185,0x839bba];g.lineStyle(c.realm?2:1,colors[hash%colors.length],c.realm?.85:.45);g.strokeRect(x+1,y+1,30,30);}
+ if(c.markets){g.fillStyle(0xd79d54);g.fillRect(x+10,y+24,14,5);g.fillStyle(0xf8e5b6);g.fillTriangle(x+8,y+24,x+17,y+17,x+26,y+24);}
+ if(c.floodedUntil>=w.year){g.fillStyle(0x579ec5,.5);g.fillRect(x,y,32,32);}
  if(c.herbivores>12){g.fillStyle(0x8b7656);g.fillEllipse(x+7,y+25,6,4);g.fillCircle(x+10,y+23,2);}
  if(c.predators>2){g.fillStyle(0x53515e);g.fillTriangle(x+23,y+24,x+27,y+19,x+30,y+25);}
  if(c.burnedUntil>=w.year){g.fillStyle(0xd48253);g.fillTriangle(x+13,y+27,x+17,y+13,x+22,y+27);}
- for(const e of w.effects){if(Math.hypot(e.intervention.position.x-c.x,e.intervention.position.y-c.y)<=2){g.lineStyle(2,e.intervention.type==='rain'?0x529cbb:0xc69154,.85);g.strokeRect(x+3,y+3,26,26);}}
+ for(const e of w.effects){if(Math.hypot(e.intervention.position.x-c.x,e.intervention.position.y-c.y)<=2){g.lineStyle(2,['rain','river'].includes(e.intervention.type)?0x529cbb:e.intervention.type==='wind'?0x929e96:0xc69154,.85);g.strokeRect(x+3,y+3,26,26);}}
  if(this.diff&&this.other){const changed=signature(c)!==signature(this.other.cells[c.id]);g.lineStyle(changed?3:1,changed?0xdb8b50:0xffffff,changed?1:.15);g.strokeRect(x+2,y+2,28,28);}
- }}
+ }
+ for(const route of w.routes){if(route.volume<.02)continue;g.lineStyle(route.roadYear?2:1,route.roadYear?0x9a7953:0xcaaa72,route.roadYear?.8:.45);for(let i=1;i<route.path.length;i++){const a=w.cells[route.path[i-1]],b=w.cells[route.path[i]];g.lineBetween(a.x*32+16,a.y*32+16,b.x*32+16,b.y*32+16);}}
+ if(w.year<1000)for(const e of w.events.filter(e=>e.type==='migration'&&e.year>=w.year-1&&e.destination!==undefined).slice(-10)){const a=w.cells[e.cell],b=w.cells[e.destination!];g.lineStyle(1,0x587f82,.55);g.lineBetween(a.x*32+16,a.y*32+16,b.x*32+16,b.y*32+16);g.fillStyle(0x587f82);g.fillCircle(b.x*32+16,b.y*32+16,2);}
+ }
  destroy(){this.game.destroy(true);}
 }

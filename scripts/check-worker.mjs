@@ -1,0 +1,11 @@
+import {readFileSync,readdirSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import assert from 'node:assert/strict';
+const file=readdirSync('dist/assets').find(file=>/^baseline\.worker-.*\.js$/.test(file));
+assert.ok(file,'Build the project first');const messages=[];
+const worker={postMessage:message=>messages.push(message),onmessage:undefined};
+runInNewContext(readFileSync(`dist/assets/${file}`,'utf8'),{self:worker,structuredClone,console},{timeout:15000});
+const started=performance.now();worker.onmessage({data:{seed:418275}});
+const ready=messages.find(message=>message.type==='ready');assert.ok(ready,'Worker must return its completed world');
+assert.equal(ready.world.year,1000);assert.equal(ready.world.interventions.length,0);assert.equal(messages.filter(message=>message.type==='progress').length,10);assert.ok(!messages.some(message=>message.type==='error'));
+console.log(JSON.stringify({ok:true,year:ready.world.year,progressMessages:10,events:ready.world.events.length,elapsedMs:Math.round(performance.now()-started)},null,2));
