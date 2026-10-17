@@ -1,19 +1,21 @@
+import {regionNames} from './RegionSystem';
+import {structuralDifference} from './WorldComparison';
 import {END_YEAR} from './HistoryConfig';
 import {escapeHtml} from './UiText';
 import type {WorldState,HistoryEvent,Cell} from './WorldState';
 import {chain} from './EventHistory';
 export interface HistoricalChange {cell:number;impact:number;path:HistoryEvent[];baseline:HistoryEvent[];before:Cell;after:Cell}
-const major=new Set(['wildfire','flood','drought','epidemic','shortage','harvest','migration','settlement','abandonment','market','trade_route','road','industry','urbanization','decline','forest_recovery','ecosystem_collapse','resource_use','arrival','death','skill_adoption','inheritance','cultural_spread','regional_tradition','realm_formation','realm_collapse','renaissance','zenith']);
+const major=new Set(['region_transition','mass_migration','wildfire','flood','drought','epidemic','shortage','harvest','migration','settlement','abandonment','market','trade_route','road','industry','urbanization','decline','forest_recovery','ecosystem_collapse','resource_use','arrival','death','skill_adoption','inheritance','cultural_spread','regional_tradition','realm_formation','realm_collapse','renaissance','zenith']);
 export function summarize(path:HistoryEvent[],limit=14):HistoryEvent[]{
  if(path.length<=limit)return path;
  const chosen=new Set<number>([0,path.length-1]);
- const priority=(e:HistoryEvent)=>['realm_formation','realm_collapse','cultural_spread','regional_tradition','urbanization','industry','skill_adoption','death','renaissance'].includes(e.type||'')?3:major.has(e.type||'')?2:1;
+ const priority=(e:HistoryEvent)=>['region_transition','mass_migration','realm_formation','realm_collapse','cultural_spread','regional_tradition','urbanization','industry','skill_adoption','death','renaissance'].includes(e.type||'')?3:major.has(e.type||'')?2:1;
  for(let start=0;start<END_YEAR;start+=100){const candidates=path.map((e,i)=>({e,i})).filter(({e})=>e.year>=start&&e.year<start+100);candidates.sort((a,b)=>priority(b.e)-priority(a.e)||a.e.year-b.e.year);if(candidates[0])chosen.add(candidates[0].i);}
  for(const type of ['skill_adoption','inheritance','market','trade_route','urbanization']){if(chosen.size>=limit)break;const index=path.findIndex(e=>e.type===type);if(index>=0)chosen.add(index);}
  return [...chosen].sort((a,b)=>a-b).slice(0,limit-1).map(i=>path[i]).concat(path.at(-1)!).filter((e,i,a)=>i===0||e.id!==a[i-1].id);
 }
 export function historicalChanges(w:WorldState,baseline:WorldState,limit=3):HistoricalChange[]{
- const candidates=w.cells.map(c=>{const a=baseline.cells[c.id];return {c,impact:Math.abs(c.stage-a.stage)*700+Math.abs(c.markets-a.markets)*500+Math.abs(c.trade-a.trade)*180+Math.abs(c.population-a.population)+Math.abs(c.roads-a.roads)*70+Math.abs(c.forest-a.forest)*100};})
+ const candidates=w.cells.map(c=>{const a=baseline.cells[c.id];return {c,impact:structuralDifference(c,a).score*1000+Math.abs(c.stage-a.stage)*700+Math.abs(c.markets-a.markets)*500+Math.abs(c.trade-a.trade)*180+Math.abs(c.population-a.population)+Math.abs(c.roads-a.roads)*70+Math.abs(c.forest-a.forest)*100};})
  .filter(({c,impact})=>impact>2&&c.terrain!=='sea'&&c.terrain!=='river'&&c.terrain!=='mountain').sort((a,b)=>b.impact-a.impact||a.c.id-b.c.id);
  const result:HistoricalChange[]=[];
  for(const {c,impact} of candidates){if(result.length>=limit)break;
@@ -24,7 +26,7 @@ export function historicalChanges(w:WorldState,baseline:WorldState,limit=3):Hist
  }
  return result;
 }
-export function describe(c:Cell):string {return `${['集落のない地域','小さな集落','交易都市','産業都市'][c.stage]}${c.markets?'・市場あり':''} / 人口 ${Math.round(c.population).toLocaleString()} / 森林 ${Math.round(c.forest*100)}%`;}
+export function describe(c:Cell):string {return `${regionNames[c.regionState]} · ${['集落のない地域','小さな集落','交易都市','産業都市'][c.stage]}${c.markets?'・市場あり':''} / 人口 ${Math.round(c.population).toLocaleString()} / 森林 ${Math.round(c.forest*100)}%`;}
 export function comparisonCards(w:WorldState,baseline:WorldState):string {
  const changes=historicalChanges(w,baseline);
  if(!changes.length)return '<p class="muted">大きな歴史の分岐は記録されませんでした。小さな異常の余波が、いつも都市まで届くとは限りません。</p>';

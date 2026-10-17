@@ -57,9 +57,10 @@ function updateRoutes(w:WorldState):void {
  const oldAge=w.year-route.formed;
  const strain=oldAge>120?Math.max(0,(a.exhaustion+b.exhaustion)*.4):0;
  const active=(a.markets>0||b.markets>0)&&a.stage>0&&b.stage>0;
- const demand=Math.min(a.localDemand,b.localDemand);
+ const demand=Math.min(6,a.localDemand,b.localDemand);
  const skillBonus=(a.traditions.boats?.adopted?a.traditions.boats.strength*.06:0)+(b.traditions.commerce?.adopted?b.traditions.commerce.strength*.06:0);
- const target=active?demand*(1+skillBonus)*(1-strain)*(.5+(a.markets+b.markets)*.25)*(route.roadYear?1.45:1):0;
+ const network=Math.min(.22,(a.trade+b.trade)*.025);
+ const target=active?demand*(1+skillBonus+network)*(1-strain)*(.5+(a.markets+b.markets)*.25)*(route.roadYear?1.45:1):0;
  route.volume+=(target-route.volume)*.14;
  if(w.year>=120&&!route.roadYear&&w.year-route.formed>=6&&route.volume>.18&&R.value(w.seed,'road',w.year,route.from*256+route.to)<.22){
   route.roadYear=w.year;route.event=emit(w,a,'road',`商人の往来が積み重なり (${b.x}, ${b.y}) への道路形成`,'trade',[route.event]);

@@ -5,7 +5,7 @@ import {land} from './Intervention';
 import {clamp,distance,emit,pathBetween} from './Dynamics';
 export function updatePopulation(w:WorldState,old:Cell[]):void {
  for(const c of w.cells){if(!land(c))continue;const p=old[c.id];
- c.links.population=combine(w,p.links.population,c.links.food,c.links.life);
+ c.links.population=combine(w,p.links.population,c.links.food,c.links.life,p.links.trade,p.links.civilization);
  const imports=Math.min(.35,p.trade*.08),supply=c.foodProduction+imports;
  const capacity=(30+supply*1550*(.65+c.health*.35))*thermalSuitability(c.temperature);c.populationCapacity=capacity;
  const births=p.population*(.025+supply*.025)*c.health;
@@ -13,8 +13,8 @@ export function updatePopulation(w:WorldState,old:Cell[]):void {
  c.population=Math.max(0,p.population+births-deaths);
  c.foodSurplus=supply-c.population/1600;
  c.localDemand=c.population/400*(.6+c.resourceAvailability*.4);
- const crowding=Math.max(0,c.population/capacity-1)*.18;
- c.settlementAttractiveness=clamp(c.habitability+p.markets*.22+Math.min(.2,p.trade*.07)+p.roads*.035+p.urbanInfluence*.08-crowding-(c.floodedUntil>=w.year?.3:0),0,1.5);
+ const crowding=Math.max(0,c.population/capacity-1)*.26;
+ c.settlementAttractiveness=clamp(c.habitability+p.markets*.24+Math.min(.28,p.trade*.09)+Math.min(.12,p.roads*.04)+p.urbanInfluence*.08-crowding-(c.floodedUntil>=w.year?.3:0),0,1.5);
  c.migration=0;
  }
  if(w.year<=100||w.year%3===0)migrate(w);
@@ -37,9 +37,10 @@ export function migrate(w:WorldState):void {
  plans.push({from:source.id,to:destination.id,amount,route:route?.event});
  }
  for(const plan of plans){const a=w.cells[plan.from],b=w.cells[plan.to];a.population-=plan.amount;b.population+=plan.amount;a.migration-=plan.amount;b.migration+=plan.amount;
- const parents=combine(w,a.links.population,a.links.life,a.links.food,b.links.trade,plan.route?[plan.route]:[]);
+ const parents=combine(w,a.links.population,a.links.life,a.links.food,b.links.trade,b.links.civilization,plan.route?[plan.route]:[]);
  if(plan.amount>=2&&(w.year%5===0||a.floodedUntil===w.year+1)){
- const id=emit(w,a,'migration',`${a.floodedUntil>=w.year?'洪水を避け':a.foodSurplus<0?'食料を求め':'暮らしと交易を求め'}住民が (${b.x}, ${b.y}) へ移住`,'migration',parents);
+ const large=plan.amount>=Math.max(18,snapshot[a.id].population*.07);
+ const id=emit(w,a,large?'mass_migration':'migration',`${large?'大移住：':''}${a.floodedUntil>=w.year?'洪水を避け':a.foodSurplus<0?'食料を求め':'暮らしと交易を求め'}住民が (${b.x}, ${b.y}) へ移住`,'migration',parents);
  const e=w.events.at(-1)!;e.destination=b.id;e.amount=plan.amount;
  b.links.migration=combine(w,b.links.migration,[id]);b.links.population=combine(w,b.links.population,[id]);
  }else{b.links.population=combine(w,b.links.population,parents);}

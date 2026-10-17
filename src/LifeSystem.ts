@@ -7,7 +7,7 @@ import {clamp,emit,sustained,cooldown} from './Dynamics';
 // A disaster changes living conditions here; only the population system applies mortality.
 export function updateLife(w:WorldState,old:Cell[]):void {
  for(const c of w.cells){if(!land(c))continue;const p=old[c.id];
- c.links.life=combine(w,p.links.life,c.links.vegetation,c.links.animals,c.links.weather,c.links.knowledge,c.links.culture);
+ c.links.life=combine(w,p.links.life,c.links.vegetation,c.links.animals,c.links.weather,c.links.knowledge,c.links.culture,p.links.civilization);
  const windy=w.effects.some(e=>e.intervention.type==='wind'&&Math.hypot(e.intervention.position.x-c.x,e.intervention.position.y-c.y)<=2);
  const wetland=c.water*(1-c.forest*.45)*(c.biome==='rainforest'||c.biome==='wetland'?1.25:1)*(windy?.6:1);
  c.pests=clamp(p.pests+(wetland*.8+.15*(1-c.biodiversity)-p.pests)*.16-c.predators*.003);
@@ -30,7 +30,10 @@ export function updateLife(w:WorldState,old:Cell[]):void {
   emit(w,c,'resource_use',{hunting:'草原の獣を利用する狩猟・毛皮生活が始まる',forestry:'森林資源と木材の利用が始まる',farming:'開けた土地で農耕生活が始まる'}[c.livelihood],'life');
  }
  if(c.livelihood==='hunting')c.foodProduction+=Math.min(.05,c.herbivores*.002);
- if(c.livelihood==='farming')c.foodProduction+=farmland*.08;
+ if(c.livelihood==='farming')c.foodProduction+=farmland*(.08+Math.min(.22,p.development/300))*(1-c.exhaustion);
+ // Local farming practice and market storage persist only while people maintain them.
+ if(p.regionState==='agricultural')c.foodProduction+=farmland*.10*(1-c.exhaustion);
+ if(p.markets)c.foodProduction*=1+Math.min(.08,p.trade*.035);
  c.foodProduction*=1+storage;
  c.foodSurplus=c.foodProduction-p.population/1600;
  c.food=c.foodProduction;

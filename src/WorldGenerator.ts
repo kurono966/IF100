@@ -17,7 +17,7 @@ export function generate(seed:number):WorldState {
  const habitability=land?Math.max(0,Math.min(1,foodProduction*.8+waterAccess*.16+thermalSuitability(g.temperature)*.18-floodRisk*.16-diseaseRisk*.15)):0;
  const population=land?1+habitability*7:0;
  return {...g,baseRainfall:rainfall,baseTemperature:g.temperature,fertilityPotential:soilFertility,populationCapacity:land?(30+foodProduction*1550)*thermalSuitability(g.temperature):0,
- population,wealth:land?3:0,development:0,forest,infrastructure:0,technology:land?1:0,trade:0,stage:0,
+ regionState:forest>.63?'forest_region':vegetation>.38&&forest<.3?'grassland':'wilderness',regionSince:0,population,wealth:land?3:0,development:0,forest,infrastructure:0,technology:land?1:0,trade:0,stage:0,
  rainfall,temperature:g.temperature,soilFertility,vegetation,water,herbivores,predators,biodiversity:profile.diversity,fireRisk:(1-water)*vegetation*.5,food:foodProduction,burnedUntil:-1,
  riverFlow:g.terrain==='river'?.2:0,floodRisk,pests:profile.pests,diseaseRisk,foodProduction,foodSurplus:foodProduction-population/1600,health:Math.max(.3,1-diseaseRisk*.65),resourceAvailability:forest*.38+herbivores*.013+soilFertility*.28,habitability,migration:0,localDemand:0,settlementAttractiveness:habitability,settlementStage:0,roads:0,markets:0,urbanInfluence:0,livelihood:'subsistence',counters:{},floodedUntil:-1,epidemicUntil:-1,
  cultureId:`c${Math.floor(x/6)}${Math.floor(y/6)}`,cultureName:['葦辺','森丘','赤土','風原','川輪','石野'][(Math.floor(x/6)+Math.floor(y/6)*3)%6],placeName:`${['葦','森','土','風','川','石'][id%6]}の${['里','丘','浜','原'][Math.floor(id/6)%4]}`,traditions:{},ruins:0,exhaustion:0,civicAge:0,prestige:0,

@@ -19,10 +19,11 @@ export function generateLocalMap(w:WorldState,c:Cell):LocalTile[]{
  const n=cover.fractal((c.x+u)*9,(c.y+v)*9),r=R.value(w.seed,'local-objects',0,c.id*1024+id);
  const bend=Math.sin((x+y)*.24+R.value(w.seed,'local-bend',0,c.id)*6)*.65;
  const river=ports.some(p=>distance(x+.5,y+.5,{x:16,y:16},p)<1+Math.min(1.4,c.riverFlow*.25)+bend*.35);
- let surface:LocalSurface=elevation<w.geography.seaLevel?'water':elevation<w.geography.seaLevel+.025?'sand':c.temperature< -3&&n>.4?'snow':c.terrain==='mountain'&&elevation>c.elevation-.03?'rock':c.biome==='desert'?'sand':c.water>.72&&n>.55?'marsh':n<Math.max(0,Math.min(.92,c.forest))?'forest':'grass';
+ let surface:LocalSurface=elevation<w.geography.seaLevel?'water':elevation<w.geography.seaLevel+.025?'sand':c.temperature< -3&&n>.4?'snow':c.terrain==='mountain'&&elevation>c.elevation-.03?'rock':c.biome==='desert'?'sand':c.water>.72&&n>.55?'marsh':n<Math.max(0,Math.min(.92,c.regionState==='forest_region'?Math.max(.74,c.forest):c.regionState==='degraded'?c.forest*.3:c.forest))?'forest':'grass';
  if(c.terrain==='sea'&&neighbor(-1,0).terrain==='sea'&&neighbor(1,0).terrain==='sea'&&neighbor(0,1).terrain==='sea'&&neighbor(0,-1).terrain==='sea')surface='water';
+ if(c.regionState==='degraded'&&surface==='grass'&&n>.34)surface='sand';
  if(c.biome==='lake'||river)surface='water';
- const dry=!['water','rock','snow','marsh'].includes(surface),center=Math.hypot(x-16,y-16),road=c.roads>0&&Math.abs(y-16-Math.sin(x*Math.PI/16)*2)<.65&&dry;
- return {x,y,elevation,surface,road,building:dry&&center<3+c.stage*2&&r<Math.min(.65,c.population/16000+.025)*c.stage,field:dry&&center>5&&center<12&&c.development>10&&n>.42&&n<.65,ruin:dry&&c.ruins>0&&r<.012};
+ const dry=!['water','rock','snow','marsh'].includes(surface),center=Math.hypot(x-16,y-16),road=(c.roads>0||c.regionState==='trade_hub')&&Math.abs(y-16-Math.sin(x*Math.PI/16)*2)<.65&&dry;
+ return {x,y,elevation,surface,road,building:dry&&center<(c.regionState==='urban_region'?13:3+c.stage*2)&&r<(c.regionState==='urban_region'?.75:Math.min(.65,c.population/16000+.025)*c.stage),field:dry&&center>5&&center<12&&c.development>10&&n>(c.regionState==='agricultural'?.22:.42)&&n<(c.regionState==='agricultural'?.85:.65),ruin:dry&&c.ruins>0&&r<(c.regionState==='ruins_region'?.14:.012)};
  });
 }

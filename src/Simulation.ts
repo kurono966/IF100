@@ -1,3 +1,4 @@
+import {updateRegions} from './RegionSystem';
 import {thermalSuitability} from './Biomes';
 import {END_YEAR} from './HistoryConfig';
 import {updateCulture,seedResidents} from './CultureSystem';
@@ -40,7 +41,7 @@ export function step(w:WorldState):WorldState {
  c.rainfall=clamp(base+(R.value(w.seed,'climate',w.year)-.5)*.25+(R.value(w.seed,'localWeather',w.year,c.id)-.5)*.12+effects.reduce((s,e)=>s+(e.intervention.type==='rain'?.16:e.intervention.type==='drought'?-.20:0),0),0,1.5);
  c.links.weather=effects.map(e=>e.event);
  c.temperature=c.baseTemperature+(R.value(w.seed,'temperature',w.year)-.5)*5+effects.filter(e=>e.intervention.type==='warmth').length*1.5;
- c.water=clamp(p.water*.58+c.rainfall*.40+(near.some(a=>a.terrain==='river')?.13:0)-Math.max(0,c.temperature-20)*.006);
+ c.water=clamp(p.water*.58+c.rainfall*(.40+p.forest*.075)+(near.some(a=>a.terrain==='river')?.13:0)-Math.max(0,c.temperature-20)*.006);
  if(effects.some(e=>e.intervention.type==='wind'))c.water=clamp(c.water-.05);
  c.fireRisk=clamp((1-c.water)*p.vegetation*.65);
  }
@@ -52,7 +53,9 @@ export function step(w:WorldState):WorldState {
  c.soilFertility=clamp(p.soilFertility+.003*(c.fertilityPotential-p.soilFertility)+.009*p.vegetation-.003*(1-p.vegetation)+.0035*(1-Math.min(1,p.population/200))-p.development*.000025,0,Math.min(1,c.fertilityPotential+.15));
  const growth=(.035*c.water*c.soilFertility*thermalSuitability(c.temperature)+.004*dispersal)*(1-p.vegetation)+.35*p.vegetation*(1-p.vegetation)*(p.vegetation-.48);
  c.vegetation=clamp(p.vegetation+growth-.0005*p.herbivores-.018*Math.max(0,.3-c.water)-p.development*.000035);
- c.forest=clamp(p.forest+(c.vegetation>.52?.022*c.vegetation:-.008)*(1-p.forest)-p.development*.000025);
+ const cultivation=p.regionState==='agricultural'&&p.population>140&&p.foodProduction>.1?.009:p.regionState==='urban_region'?.0025:0;
+ c.forest=clamp(p.forest+(c.vegetation>.52?.022*c.vegetation:-.008)*(1-p.forest)-p.development*.000025-cultivation);
+ if(cultivation>0)c.links.vegetation=combine(w,c.links.vegetation,p.links.civilization);
  if(c.counters.ignition===1||R.value(w.seed,'fire',w.year,c.id)<c.fireRisk*.012){c.vegetation*=.65;c.forest*=.8;c.soilFertility=clamp(c.soilFertility+.06);c.burnedUntil=w.year+1;emit(w,c,'wildfire','山火事で森林が減り、灰が土壌に残る','vegetation',combine(w,c.links.vegetation,c.links.weather));c.counters.ignition=0;}
  c.biodiversity=clamp(p.biodiversity+.015*(c.vegetation+.2*Math.min(1,p.predators/3)-p.biodiversity)-.003*p.development/30);
  milestone(w,c,'vegetation','vegetation',.07,'植生が回復・拡大','植生が減少');
@@ -75,6 +78,7 @@ export function step(w:WorldState):WorldState {
  updatePopulation(w,old);
  updateCivilization(w,old);
  updateLongHistory(w,old);
+ updateRegions(w);
  if(w.year===END_YEAR)for(const c of w.cells.filter(land)){
  const id=record(w,`${END_YEAR}年後：${['草地と生態系が残る地域','集落が続く地域','交易都市となった地域','産業都市となった地域'][c.stage]}`,c.id,combine(w,c.links.civilization,c.links.trade,c.links.population,c.links.culture,c.links.knowledge,...Object.values(c.traditions).map(t=>[t!.event])));w.events.at(-1)!.type='outcome';c.links.civilization=[id];
  }
