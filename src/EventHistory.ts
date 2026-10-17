@@ -1,6 +1,6 @@
 import {structuralDifference} from './WorldComparison';
 import type {WorldState,HistoryEvent,EventType,Phase} from './WorldState';
-export function record(w:WorldState,title:string,cell:number,parents:string[]=[],root?:string):string {
+export function record(w:Pick<WorldState,'events'|'year'>,title:string,cell:number,parents:string[]=[],root?:string):string {
  const id=`e${w.events.length}`,ancestors=parents.map(p=>w.events[Number(p.slice(1))]).filter(Boolean);
  w.events.push({id,year:w.year,title,cell,parents:[...parents],root,
  roots:[...new Set([...ancestors.flatMap(e=>e.roots||[]),...(root?[root]:[])])],
